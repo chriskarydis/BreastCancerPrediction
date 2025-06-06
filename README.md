@@ -81,7 +81,7 @@ The application uses a pre-trained **Random Forest** model (`Best_Random_Forest_
 
 ## 📜 License
 
-This project is licensed under the GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 License.
+This project is licensed under the GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007.
 
 ---
 
