@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8">
+  <title>Πρόβλεψη Νόσου</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+  <style>
+    body.dark-mode {
+      background-color: #121212;
+      color: white;
+    }
+    .dark-mode .card {
+      background-color: #1e1e1e;
+      color: white;
+    }
+    .spinner-container {
+      display: none;
+      justify-content: center;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container mt-5">
+    <div class="d-flex justify-content-end mb-2">
+      <button class="btn btn-outline-secondary me-2" onclick="toggleLanguage()">🌐 <span id="lang-btn">EN</span></button>
+      <button class="btn btn-outline-dark" onclick="toggleDarkMode()">🌓</button>
+    </div>
+
+    <div class="row">
+      <!-- Left Column: Form & Prediction -->
+      <div class="col-lg-8">
+        <form action="/" method="get" class="text-end mb-3">
+          <label for="username" class="form-label me-2 fw-bold" data-translate="username_label">👤 Όνομα Χρήστη:</label>
+          <input type="text" id="username" name="username" class="form-control d-inline-block w-auto"
+                onblur="saveUsername(this.value)" value="" required>
+        </form>
+        <div class="card shadow-lg mb-4">
+          <div class="card-body">
+            <h2 class="card-title text-center mb-4" data-translate="title">🔬 Σύστημα Πρόβλεψης Νόσου</h2>
+            <p class="text-center" data-translate="subtitle">Συμπληρώστε τα στοιχεία σας για να δείτε εάν νοσείτε.</p>
+
+            <form action="/predict" method="post" class="row g-3 needs-validation" novalidate onsubmit="showSpinner()">
+              <!-- [inputs όπως πριν] -->
+              <!-- (copy-paste εδώ τα input fields age, bmi, glucose, resistin) -->
+              <div class="col-md-6">
+                <label for="age" class="form-label" data-translate="age">Ηλικία</label>
+                <input type="number" class="form-control" id="age" name="age" step="0.1" required
+                      min="10" max="120"
+                      value="{{ form_values.age if form_values is defined else '' }}">
+                <div class="invalid-feedback" data-translate="required">Απαιτείται ηλικία.</div>
+                <div class="invalid-feedback" data-translate="error_age">Η τιμή πρέπει να είναι μεταξύ 10 και 120.</div>
+              </div>
+              <div class="col-md-6">
+                <label for="bmi" class="form-label" data-translate="bmi">Δείκτης Μάζας Σώματος</label>
+                <input type="number" class="form-control" id="bmi" name="bmi" step="0.1" required
+                      min="10" max="60"
+                      value="{{ form_values.bmi if form_values is defined else '' }}">            
+                <div class="invalid-feedback" data-translate="required">Απαιτείται Δείκτης Μάζας Σώματος.</div>
+                <div class="invalid-feedback" data-translate="error_bmi">Η τιμή πρέπει να είναι μεταξύ 10 και 60.</div>
+              </div>
+              <div class="col-md-6">
+                <label for="glucose" class="form-label" data-translate="glucose">Γλυκόζη</label>
+                <input type="number" class="form-control" id="glucose" name="glucose" step="0.1" required
+                      min="40" max="250"                
+                      value="{{ form_values.glucose if form_values is defined else '' }}">
+                <div class="invalid-feedback" data-translate="required">Απαιτείται γλυκόζη.</div>
+                <div class="invalid-feedback" data-translate="error_glucose">Η τιμή πρέπει να είναι μεταξύ 40 και 250.</div>
+              </div>
+              <div class="col-md-6">
+                <label for="resistin" class="form-label" data-translate="resistin">Ρεζιστίνη</label>
+                <input type="number" class="form-control" id="resistin" name="resistin" step="0.1" required
+                      min="2" max="40"
+                      value="{{ form_values.resistin if form_values is defined else '' }}">
+                <div class="invalid-feedback" data-translate="required">Απαιτείται Ρεζιστίνη.</div>
+                <div class="invalid-feedback" data-translate="error_resistin">Η τιμή πρέπει να είναι μεταξύ 2 και 40.</div>
+              </div>
+              <div class="col-12 text-center mt-4">
+                <button type="submit" class="btn btn-primary px-5" data-translate="predict">🔍 Πρόβλεψη</button>
+              </div>
+            </form>
+
+            <div class="spinner-container" id="spinner">
+              <div class="spinner-border text-primary" role="status"></div>
+            </div>
+
+            {% if prediction_text %}
+              <script id="resultData" type="application/json">
+              {
+                "prediction_text": "{{ prediction_text }}",
+                "eval_message": "{{ eval_message }}",
+                "prob_no": {{ prob_no|safe }},
+                "prob_yes": {{ prob_yes|safe }}
+              }
+              </script>
+              
+              {% if history %}
+                <script id="historyData" type="application/json">
+                  {{ history | tojson | safe }}
+                </script>
+              {% endif %}
+
+              <div class="alert alert-info text-center mt-4" role="alert">
+                <strong id="resultText">{{ prediction_text }}</strong><br>
+                <em id="evalMessage">{{ eval_message }}</em>
+              </div>
+            {% endif %}
+
+            {% if prob_no is defined and prob_yes is defined %}
+              <div class="card mt-3 p-3">
+                <h5 class="text-center mb-3" id="chartTitle">📊 Πιθανότητες</h5>
+                <canvas id="probChart" width="400" height="120"></canvas>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: History -->
+      <div class="col-lg-4">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title text-center" id="historyTitle" data-translate="history">📜 Ιστορικό Προβλέψεων</h5>
+            {% if history %}
+              <div id="historyList">
+                {% for item in history|reverse %}
+                  <li class="list-group-item small">
+                    <strong>{{ item.result }}</strong> ({{ item.prob_yes }}%)<br>
+                    <small>
+                      Ηλικία: {{ item.age }},
+                      Δείκτης Μάζας Σώματος: {{ item.bmi }},
+                      Γλυκόζη: {{ item.glucose }},
+                      Ρεζιστίνη: {{ item.resistin }}
+                    </small>
+                  </li>
+                {% endfor %}
+              </div>
+            {% else %}
+              <p class="card-body text-center" id="noHistoryMsg" data-translate="no_history">Δεν υπάρχουν ακόμα προβλέψεις.</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <footer class="text-center mt-5 text-muted">
+    <small>© 2025 DSS - Breast Cancer Prediction</small>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    let resultData = null;
+    try {
+      resultData = JSON.parse(document.getElementById("resultData").textContent);
+    } catch (e) { resultData = null; }
+
+    function translateMessage(msg) {
+      if (msg.includes("Υψηλή")) return "⚠ High probability. Medical check recommended.";
+      if (msg.includes("Μέτρια")) return "🔍 Medium probability. Monitoring recommended.";
+      if (msg.includes("Χαμηλή")) return "✅ Low probability. Indications of health.";
+      return msg;
+    }
+
+    function updateResultLanguage() {
+      if (!resultData) return;
+
+      const isGreek = currentLang === "el";
+      const resultTextEl = document.getElementById("resultText");
+      const evalMsgEl = document.getElementById("evalMessage");
+      const chartTitleEl = document.getElementById("chartTitle");
+
+      // === Μετάφραση κειμένου "Αποτέλεσμα: ..."
+      if (resultTextEl) {
+        const predictionGr = resultData.prediction_text.includes("Νοσεί") ? "Νοσεί" : "Υγιής";
+        const predictionEn = predictionGr === "Νοσεί" ? "Diseased" : "Healthy";
+        const probabilityMatch = resultData.prediction_text.match(/([0-9]+\.?[0-9]*%)/);
+        const probability = probabilityMatch ? probabilityMatch[1] : "";
+
+        const resultLine = isGreek
+          ? `Αποτέλεσμα: ${predictionGr} (πιθανότητα: ${probability})`
+          : `Result: ${predictionEn} (probability: ${probability})`;
+
+        resultTextEl.textContent = resultLine;
+      }
+
+      // === Μετάφραση αξιολόγησης
+      if (evalMsgEl) {
+        evalMsgEl.textContent = isGreek
+          ? resultData.eval_message
+          : translateMessage(resultData.eval_message);
+      }
+
+      // === Μετάφραση τίτλου γραφήματος
+      if (chartTitleEl) {
+        chartTitleEl.textContent = isGreek ? "📊 Πιθανότητες" : "📊 Probabilities";
+      }
+
+      // === Μετάφραση ετικέτας γραφήματος
+      if (window.myChart) {
+        myChart.data.labels = isGreek ? ["Υγιής", "Νοσεί"] : ["Healthy", "Diseased"];
+        myChart.data.datasets[0].label = isGreek ? "Πιθανότητα (%)" : "Probability (%)";
+        myChart.update();
+      }
+    }
+
+function renderHistory(language) {
+  const historyDiv = document.getElementById("historyList");
+  if (!historyDiv) return;
+
+  let history = [];
+  try {
+    history = JSON.parse(document.getElementById("historyData").textContent);
+  } catch (e) {
+    historyDiv.innerHTML = `<p class="text-center text-body" id="noHistoryMsg" data-translate="no_history">${translations[language]["no_history"]}</p>`;
+    return;
+  }
+
+  if (history.length === 0) {
+    historyDiv.innerHTML = `<p class="text-center text-body" id="noHistoryMsg" data-translate="no_history">${translations[language]["no_history"]}</p>`;
+    return;
+  }
+
+  const titleYes = language === "el" ? "Νοσεί" : "Diseased";
+  const titleNo = language === "el" ? "Υγιής" : "Healthy";
+  const labels = {
+    age: language === "el" ? "Ηλικία" : "Age",
+    bmi: language === "el" ? "Δείκτης Μάζας Σώματος" : "BMI",
+    glucose: language === "el" ? "Γλυκόζη" : "Glucose",
+    resistin: language === "el" ? "Ρεζιστίνη" : "Resistin"
+  };
+
+  let listHTML = '<ul class="list-group list-group-flush">';
+  history.slice().reverse().forEach(item => {
+    const label = item.result === "Νοσεί" ? titleYes : titleNo;
+    listHTML += `
+      <li class="list-group-item small">
+        <strong>${label}</strong> (${item.prob_yes}%)<br>
+        <small>
+          ${labels.age}: ${item.age}, 
+          ${labels.bmi}: ${item.bmi}, 
+          ${labels.glucose}: ${item.glucose}, 
+          ${labels.resistin}: ${item.resistin}
+        </small>
+      </li>`;
+  });
+  listHTML += '</ul>';
+  listHTML += `
+    <form action="/clear" method="get" class="text-center mt-2">
+      <button class="btn btn-sm btn-outline-danger" data-translate="clear">${translations[language]["clear"]}</button>
+    </form>
+    <form action="/export" method="get" class="text-center mt-2">
+      <button class="btn btn-sm btn-outline-success" id="exportBtn" data-translate="export">${translations[language]["export"]}</button>
+    </form>`;
+
+
+  historyDiv.innerHTML = listHTML;
+}
+
+
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("lang-btn").textContent = currentLang.toUpperCase();
+  document.querySelectorAll("[data-translate]").forEach(el => {
+    const key = el.getAttribute("data-translate");
+    if (translations[currentLang][key]) {
+      el.textContent = translations[currentLang][key];
+    }
+  });
+  updateResultLanguage();
+  renderHistory(currentLang);
+});
+
+window.addEventListener("DOMContentLoaded", function () {
+      const chartCanvas = document.getElementById('probChart');
+      if (chartCanvas && resultData) {
+        const ctx = chartCanvas.getContext('2d');
+        window.myChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: currentLang === 'el' ? ['Υγιής', 'Νοσεί'] : ['Healthy', 'Diseased'],
+            datasets: [{
+              label: currentLang === 'el' ? 'Πιθανότητα (%)' : 'Probability (%)',
+              data: [resultData.prob_no, resultData.prob_yes],
+              backgroundColor: ['#4caf50', '#f44336'],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            scales: {
+              x: { beginAtZero: true, max: 100 }
+            }
+          }
+        });
+      }
+    });
+
+    // Validation
+    (() => {
+      'use strict'
+      const forms = document.querySelectorAll('.needs-validation')
+      Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+          if (!form.checkValidity()) {
+            event.preventDefault()
+            event.stopPropagation()
+          }
+          form.classList.add('was-validated')
+        }, false)
+      })
+    })();
+
+    // Spinner
+    function showSpinner() {
+      document.getElementById('spinner').style.display = 'flex';
+    }
+
+    // Dark mode toggle
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
+      localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
+    }
+    if (localStorage.getItem("darkMode") === "true") {
+      document.body.classList.add("dark-mode");
+    }
+
+    // Language toggle
+    const translations = {
+      el: {
+        title: "🔬 Σύστημα Πρόβλεψης Νόσου",
+        subtitle: "Συμπληρώστε τα στοιχεία σας για να δείτε εάν νοσείτε.",
+        age: "Ηλικία",
+        bmi: "Δείκτης Μάζας Σώματος (BMI)",
+        glucose: "Γλυκόζη",
+        resistin: "Ρεζιστίνη",
+        predict: "🔍 Πρόβλεψη",
+        required: "Απαιτείται πεδίο.",
+        history: "📜 Ιστορικό Προβλέψεων",
+        no_history: "Δεν υπάρχουν ακόμα προβλέψεις.",
+        username_label: "👤 Όνομα Χρήστη:",
+        export: "📥 Εξαγωγή Ιστορικού",
+        clear: "🗑️ Καθαρισμός Ιστορικού",
+        error_age: "Η τιμή πρέπει να είναι μεταξύ 10 και 120.",
+        error_bmi: "Η τιμή πρέπει να είναι μεταξύ 10 και 60.",
+        error_glucose: "Η τιμή πρέπει να είναι μεταξύ 40 και 250.",
+        error_resistin: "Η τιμή πρέπει να είναι μεταξύ 2 και 40.",
+      },
+      en: {
+        title: "🔬 Disease Prediction System",
+        subtitle: "Enter your details to see if you are diseased.",
+        age: "Age",
+        bmi: "BMI",
+        glucose: "Glucose",
+        resistin: "Resistin",
+        predict: "🔍 Predict",
+        required: "This field is required.",
+        history: "📜 Prediction History",
+        no_history: "No predictions yet.",
+        username_label: "👤 Username:",
+        export: "📥 Export History",
+        clear: "🗑️ Clear History",
+        error_age: "Value must be between 10 and 120.",
+        error_bmi: "Value must be between 10 and 60.",
+        error_glucose: "Value must be between 40 and 250.",
+        error_resistin: "Value must be between 2 and 40.",
+      }
+    };
+    let currentLang = localStorage.getItem("language") || "el";
+
+    function toggleLanguage() {
+      currentLang = currentLang === "el" ? "en" : "el";
+      localStorage.setItem("language", currentLang);
+      document.getElementById("lang-btn").textContent = currentLang.toUpperCase();
+      document.querySelectorAll("[data-translate]").forEach(el => {
+        const key = el.getAttribute("data-translate");
+        if (translations[currentLang][key]) {
+          el.textContent = translations[currentLang][key];
+        }
+      });
+      updateResultLanguage();
+      renderHistory(currentLang);
+    }
+
+    function saveUsername(name) {
+      document.cookie = "username=" + encodeURIComponent(name) + "; path=/";
+    }
+
+    function getCookie(name) {
+      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+      return match ? decodeURIComponent(match[2]) : "";
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+      const user = getCookie("username");
+      if (user) {
+        const input = document.getElementById("username");
+        if (input) input.value = user;
+      }
+    });
+
+  </script>
+</body>
+</html>
