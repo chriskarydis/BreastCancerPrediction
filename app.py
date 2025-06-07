@@ -11,7 +11,7 @@ model = joblib.load("Best_Random_Forest_Model.pkl")
 
 def get_user_history_key():
     username = request.cookies.get("username") or session.get("user", "default")
-    session["user"] = username  # αποθήκευση και στο session για συνέπεια
+    session["user"] = username 
     return f"history_{username}"
 
 
@@ -104,7 +104,6 @@ def export_history():
     for row in history:
         writer.writerow(row)
 
-    # Επιστροφή με UTF-8 BOM ώστε να φαίνονται σωστά τα ελληνικά
     csv_data = csv_buffer.getvalue().encode("utf-8-sig")
 
     return (
