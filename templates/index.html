@@ -30,7 +30,6 @@
     </div>
 
     <div class="row">
-      <!-- Left Column: Form & Prediction -->
       <div class="col-lg-8">
         <form action="/" method="get" class="text-end mb-3">
           <label for="username" class="form-label me-2 fw-bold" data-translate="username_label">👤 Όνομα Χρήστη:</label>
@@ -43,8 +42,6 @@
             <p class="text-center" data-translate="subtitle">Συμπληρώστε τα στοιχεία σας για να δείτε εάν νοσείτε.</p>
 
             <form action="/predict" method="post" class="row g-3 needs-validation" novalidate onsubmit="showSpinner()">
-              <!-- [inputs όπως πριν] -->
-              <!-- (copy-paste εδώ τα input fields age, bmi, glucose, resistin) -->
               <div class="col-md-6">
                 <label for="age" class="form-label" data-translate="age">Ηλικία</label>
                 <input type="number" class="form-control" id="age" name="age" step="0.1" required
@@ -118,7 +115,6 @@
         </div>
       </div>
 
-      <!-- Right Column: History -->
       <div class="col-lg-4">
         <div class="card shadow-sm">
           <div class="card-body">
@@ -173,7 +169,6 @@
       const evalMsgEl = document.getElementById("evalMessage");
       const chartTitleEl = document.getElementById("chartTitle");
 
-      // === Μετάφραση κειμένου "Αποτέλεσμα: ..."
       if (resultTextEl) {
         const predictionGr = resultData.prediction_text.includes("Νοσεί") ? "Νοσεί" : "Υγιής";
         const predictionEn = predictionGr === "Νοσεί" ? "Diseased" : "Healthy";
@@ -187,19 +182,16 @@
         resultTextEl.textContent = resultLine;
       }
 
-      // === Μετάφραση αξιολόγησης
       if (evalMsgEl) {
         evalMsgEl.textContent = isGreek
           ? resultData.eval_message
           : translateMessage(resultData.eval_message);
       }
 
-      // === Μετάφραση τίτλου γραφήματος
       if (chartTitleEl) {
         chartTitleEl.textContent = isGreek ? "📊 Πιθανότητες" : "📊 Probabilities";
       }
 
-      // === Μετάφραση ετικέτας γραφήματος
       if (window.myChart) {
         myChart.data.labels = isGreek ? ["Υγιής", "Νοσεί"] : ["Healthy", "Diseased"];
         myChart.data.datasets[0].label = isGreek ? "Πιθανότητα (%)" : "Probability (%)";
@@ -300,7 +292,6 @@ window.addEventListener("DOMContentLoaded", function () {
       }
     });
 
-    // Validation
     (() => {
       'use strict'
       const forms = document.querySelectorAll('.needs-validation')
@@ -315,12 +306,10 @@ window.addEventListener("DOMContentLoaded", function () {
       })
     })();
 
-    // Spinner
     function showSpinner() {
       document.getElementById('spinner').style.display = 'flex';
     }
 
-    // Dark mode toggle
     function toggleDarkMode() {
       document.body.classList.toggle("dark-mode");
       localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
@@ -329,7 +318,6 @@ window.addEventListener("DOMContentLoaded", function () {
       document.body.classList.add("dark-mode");
     }
 
-    // Language toggle
     const translations = {
       el: {
         title: "🔬 Σύστημα Πρόβλεψης Νόσου",
